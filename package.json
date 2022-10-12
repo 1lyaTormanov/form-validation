@@ -39,5 +39,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "fp-ts": "^2.12.3",
+    "react-use": "^17.4.0"
   }
 }
