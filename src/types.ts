@@ -1,4 +1,3 @@
-import {boolean} from "fp-ts";
 
 export type ValidateType = 'login' | 'password'
 
@@ -31,3 +30,4 @@ export type Schema<T extends string> = {
     schema: SchemaFieldsMapping<T>,
     validateOnSubmit: boolean,
 }
+

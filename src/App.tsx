@@ -1,10 +1,8 @@
-import React, {ChangeEvent, FunctionComponent, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {ChangeEvent, useState} from 'react';
 import './App.css';
-import {useEffectOnce, useSetState, useUpdateEffect} from "react-use";
-import * as S from 'fp-ts/string'
-import {uniq} from "fp-ts/NonEmptyArray";
-import {boolean} from "fp-ts";
-import {Schema, SchemaFieldsMapping, SchemaFieldsValidated, ValidatedFieldResponse, ValidateType} from "./types";
+import { useSetState} from "react-use";
+
+import {Schema, SchemaFieldsValidated, ValidatedFieldResponse, ValidateType} from "./types";
 
 
 
@@ -45,7 +43,7 @@ const val: Schema<ValidateType> = {
                },
                (value)=> {
                    return {
-                       isValid: value.length > 4,
+                       isValid: value.length >= 4,
                        errorText: 'Пароль должен состоять минимум из 4х символов'
                    }
                }
@@ -54,39 +52,58 @@ const val: Schema<ValidateType> = {
        },
    }
 }
-
 export function useValidate<T extends string>(data: Schema<T>){
+    const [schema, setSchema] = useSetState<SchemaFieldsValidated<T>>(initialFields());
+    const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const [schema, setSchema] = useSetState<SchemaFieldsValidated<T>>();
+    function initialFields () {
+        let res: SchemaFieldsValidated<T> | undefined = undefined;
+
+        for(let i in data.schema){
+            if(res){
+                res = {...res, ...{[i] : {value: '', isTouched: false}}} as SchemaFieldsValidated<T>;
+            }
+            else{
+                res = {[i] : {value: '', isTouched: false}} as SchemaFieldsValidated<T>
+            }
+        }
+        return res
+    }
 
 
-    const checkFields = (name: T, value: string) => {
-        const field = data.schema[name]
+    const checkFields = (name: T, value: string, renderCond: boolean) => {
+        const field = data.schema[name];
         const errors = field.handlers.filter(handler => {
             const h = handler(value);
             return !h.isValid
-        }).map(i => i(value).errorText)
+        }).map(i => i(value).errorText);
+
             const fieldData: Partial<ValidatedFieldResponse> = { value: value, isTouched: true };
-            setSchema({[name]: !data.validateOnSubmit ?
-                    fieldData: { errors: errors, isValid: !errors.length, value: value, isTouched: true } } as SchemaFieldsValidated<T>)
+            setSchema(
+                {[name]: !renderCond ?
+                    fieldData:
+                    { errors: errors, isValid: !errors.length, value: value, isTouched: true } } as SchemaFieldsValidated<T>);
     }
 
     const handleField = (e: ChangeEvent<HTMLInputElement>) => {
         const fieldName = e.target.name as unknown as T;
-        const value = e.target.value
+        const value = e.target.value;
 
-        checkFields(fieldName, value);
-
+        checkFields(fieldName, value,
+            (!data.validateOnSubmit && isSubmitted)
+            || (!data.validateOnSubmit && !isSubmitted));
     }
 
 
-    const onSubmit = (callback: (values: SchemaFieldsValidated<T>) => void)=> {
+    const onSubmit = (callback: (values?: SchemaFieldsValidated<T>) => void)=> {
+            setIsSubmitted(true);
             for(let key in data.schema){
-                console.log(data.schema)
-                checkFields(key, schema[key].value ?? '');
-
+                if(schema[key]){
+                    checkFields(key, schema[key].value ?? '', true);
+                }
             }
-            callback(schema)
+            callback(schema);
+
     }
 
 
@@ -121,23 +138,20 @@ export function Input<T extends string>(props: InputProps<T>){
 }
 
 
-
-// export function ValidateProvider(){
-//     return(
-//
-//     )
-// }
-
 function App() {
     const {fields, onChange, onSubmit} = useValidate(val)
     console.log(fields);
   return (
     <div className="App">
-       <Input<ValidateType> value={fields?.login?.value}
-                            errors={fields?.login?.errors}
-                            isValid={fields?.login?.isValid}
+       <Input value={fields.login.value}
+                            errors={fields.login.errors}
+                            isValid={fields.login.isValid}
                             onChange={onChange} name={'login'}/>
-        <button onClick={()=> onSubmit(values => console.log(fields))}>validate</button>
+        <Input value={fields.password.value}
+                             errors={fields.password.errors}
+                             isValid={fields.password.isValid}
+                             onChange={onChange} name={'password'}/>
+        <button onClick={()=> onSubmit(() => console.log(fields))}>validate</button>
     </div>
   );
 }
