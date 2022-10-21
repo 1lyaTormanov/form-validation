@@ -1,8 +1,8 @@
-import React, {ChangeEvent, useState} from 'react';
+import React, {ChangeEvent, useEffect, useState} from 'react';
 import './App.css';
 import { useSetState} from "react-use";
 
-import {Schema, SchemaFieldsValidated, ValidatedFieldResponse, ValidateType} from "./types";
+import {Schema, SchemaFieldsValidated, ValidatedFieldResponse, ValidateType, ValueToFields} from "./types";
 
 
 
@@ -41,10 +41,10 @@ const val: Schema<ValidateType> = {
                        errorText: 'Введите значение'
                    }
                },
-               (value)=> {
+               (value, schema)=> {
                    return {
-                       isValid: value.length >= 4,
-                       errorText: 'Пароль должен состоять минимум из 4х символов'
+                       isValid: value === schema.login,
+                       errorText: 'Логин и пароль должны совпадать(тест)'
                    }
                }
            ],
@@ -73,12 +73,16 @@ export function useValidate<T extends string>(data: Schema<T>){
 
     const checkFields = (name: T, value: string, renderCond: boolean) => {
         const field = data.schema[name];
+        let values = {};
+        for(let key in schema){
+            values = {...values,[key]: schema[key].value}
+        }
         const errors = field.handlers.filter(handler => {
-            const h = handler(value);
+            const h = handler(value, values as ValueToFields<T>);
             return !h.isValid
-        }).map(i => i(value).errorText);
+        }).map(i => i(value, values as ValueToFields<T>).errorText);
 
-            const fieldData: Partial<ValidatedFieldResponse> = { value: value, isTouched: true };
+            const fieldData: Partial<ValidatedFieldResponse<T>> = { value: value, isTouched: true };
             setSchema(
                 {[name]: !renderCond ?
                     fieldData:
@@ -140,7 +144,6 @@ export function Input<T extends string>(props: InputProps<T>){
 
 function App() {
     const {fields, onChange, onSubmit} = useValidate(val)
-    console.log(fields);
   return (
     <div className="App">
        <Input value={fields.login.value}
