@@ -74,6 +74,7 @@ export function useValidate<T extends string>(data: Schema<T>){
     const checkFields = (name: T, value: string, renderCond: boolean) => {
         const field = data.schema[name];
         let values = {};
+
         for(let key in schema){
             values = {...values,[key]: schema[key].value}
         }
@@ -82,9 +83,9 @@ export function useValidate<T extends string>(data: Schema<T>){
             return !h.isValid
         }).map(i => i(value, values as ValueToFields<T>).errorText);
 
-            const fieldData: Partial<ValidatedFieldResponse<T>> = { value: value, isTouched: true };
-            setSchema(
-                {[name]: !renderCond ?
+        const fieldData: Partial<ValidatedFieldResponse<T>> = { value: value, isTouched: true };
+        setSchema(
+            {[name]: !renderCond ?
                     fieldData:
                     { errors: errors, isValid: !errors.length, value: value, isTouched: true } } as SchemaFieldsValidated<T>);
     }
@@ -100,25 +101,27 @@ export function useValidate<T extends string>(data: Schema<T>){
 
 
     const onSubmit = (callback: (values?: SchemaFieldsValidated<T>) => void)=> {
-            setIsSubmitted(true);
-            for(let key in data.schema){
-                if(schema[key]){
-                    checkFields(key, schema[key].value ?? '', true);
-                }
+        setIsSubmitted(true);
+        for(let key in data.schema){
+            if(schema[key]){
+                checkFields(key, schema[key].value ?? '', true);
             }
-            callback(schema);
+        }
+        callback(schema);
 
     }
-
 
     return {
         fields: schema,
         onChange: handleField,
-        onSubmit: onSubmit
+        onSubmit: onSubmit,
+        isFieldsValid: Object.entries(schema).map(([i, data]) => data).every(i => {
+            const elem = i as ValidatedFieldResponse<T>
+            return elem.isValid
+        })
     }
 
 }
-
 
 export interface InputProps<T extends string>{
     value?: string,
